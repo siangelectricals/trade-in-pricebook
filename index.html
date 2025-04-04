@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>产品回收价格精准查询</title>
+    <title>产品回收价格查询系统</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -20,7 +20,6 @@
             color: #2c3e50;
             text-align: center;
             margin-bottom: 25px;
-            font-size: 24px;
         }
         .search-box {
             position: relative;
@@ -54,9 +53,6 @@
         .dropdown-item:hover {
             background-color: #f8f9fa;
         }
-        .dropdown-item.highlighted {
-            background-color: #e9ecef;
-        }
         button {
             width: 100%;
             padding: 12px;
@@ -78,7 +74,6 @@
             border-radius: 4px;
             font-size: 18px;
             text-align: center;
-            min-height: 24px;
         }
         #status {
             color: #7f8c8d;
@@ -90,8 +85,8 @@
 </head>
 <body>
     <div class="container">
-        <h2>产品回收价格精准查询</h2>
-        <div id="status">正在初始化系统...</div>
+        <h2>产品回收价格查询系统</h2>
+        <div id="status">正在连接Google Drive数据...</div>
         
         <div class="search-box">
             <input type="text" id="modelInput" placeholder="输入产品型号 (如: iPhone15, OLED77)">
@@ -106,33 +101,43 @@
         // 存储所有型号数据
         let allModels = {};
         let dataLoaded = false;
-        let activeDropdownItem = -1;
 
-        // 从Google Sheets加载数据
-        async function loadModelData() {
-            const sheetID = "1gnP-PbAv3SkOYN101L6MJKXv8iUw13PK2NRSKnj34JQ";
-            const sheetName = "master";
-            const apiUrl = `https://opensheet.elk.sh/${sheetID}/${sheetName}`;
+        // 从您的Google Sheet加载数据
+        async function loadFromYourGoogleSheet() {
+            // 替换为您的Google Sheet ID
+            const YOUR_SHEET_ID = "1gnP-PbAv3SkOYN101L6MJKXv8iUw13PK2NRSKnj34JQ";
+            // 替换为您的工作表名称
+            const YOUR_SHEET_NAME = "master";
+            
+            // 使用opensheet.elk.sh服务访问您的Google Sheet
+            const url = `https://opensheet.elk.sh/${YOUR_SHEET_ID}/${YOUR_SHEET_NAME}`;
             
             try {
-                document.getElementById('status').textContent = "正在从数据库加载型号信息...";
+                document.getElementById('status').textContent = "正在从您的Google Drive加载数据...";
+                const response = await fetch(url);
                 
-                const response = await fetch(apiUrl);
-                if (!response.ok) throw new Error(`服务器返回: ${response.status}`);
+                if (!response.ok) {
+                    throw new Error(`无法访问您的Google Sheet: HTTP ${response.status}`);
+                }
                 
                 const data = await response.json();
-                if (!data.length) throw new Error("数据库中没有找到型号数据");
                 
-                // 验证数据结构
-                if (!data[0]['Sales model'] || !data[0]['Trade In Value']) {
-                    throw new Error("数据表必须包含'Sales model'和'Trade In Value'列");
+                // 验证数据格式
+                if (!Array.isArray(data) || data.length === 0) {
+                    throw new Error("您的Sheet中没有数据或格式不正确");
+                }
+                
+                // 检查必要的列
+                const firstRow = data[0];
+                if (!firstRow['Sales model'] || !firstRow['Trade In Value']) {
+                    throw new Error("您的Sheet必须包含'Sales model'和'Trade In Value'列");
                 }
                 
                 // 处理数据
                 allModels = {};
-                data.forEach(item => {
-                    const model = item['Sales model']?.toString().trim();
-                    const value = parseFloat(item['Trade In Value']?.toString().replace(/[^\d.-]/g, ''));
+                data.forEach(row => {
+                    const model = row['Sales model']?.toString().trim();
+                    const value = parseFloat(row['Trade In Value']?.toString().replace(/[^\d.-]/g, ''));
                     
                     if (model && !isNaN(value)) {
                         allModels[model] = value;
@@ -140,50 +145,36 @@
                 });
                 
                 if (Object.keys(allModels).length === 0) {
-                    throw new Error("没有有效的型号数据");
+                    throw new Error("没有找到有效的型号和价格数据");
                 }
                 
                 dataLoaded = true;
                 document.getElementById('status').textContent = `已加载 ${Object.keys(allModels).length} 个产品型号`;
                 
             } catch (error) {
-                console.error("数据加载错误:", error);
-                document.getElementById('status').textContent = "使用本地示例数据";
+                console.error("加载您的数据失败:", error);
+                document.getElementById('status').textContent = 
+                    `错误: ${error.message} (请确保Sheet已共享)`;
                 
-                // 示例数据
-                allModels = {
-                    "iPhone15Pro-128GB": 3800,
-                    "iPhone15Pro-256GB": 4200,
-                    "iPhone14Pro-128GB": 3200,
-                    "GalaxyS23Ultra-256GB": 3500,
-                    "GalaxyS22Ultra-256GB": 2800,
-                    "OLED77G4PSA": 4500,
-                    "OLED77C4PSA": 4200,
-                    "OLED65G4PSA": 3200,
-                    "OLED65C4PSA": 3000,
-                    "MacBookProM2-14": 4200,
-                    "MacBookAirM2-13": 3800,
-                    "Xiaomi13Pro-256GB": 2800,
-                    "HuaweiP60Pro-256GB": 2600
-                };
-                
-                dataLoaded = true;
+                // 这里不使用任何示例数据，确保完全基于您的Google Drive
+                document.getElementById('result').textContent = 
+                    "系统无法加载数据，请检查您的Google Sheet设置";
             }
         }
 
-        // 生成下拉菜单
-        function showDropdown(filter = '') {
+        // 显示下拉建议
+        function showSuggestions(searchText) {
             const dropdown = document.getElementById('modelDropdown');
             dropdown.innerHTML = '';
             
-            if (!filter) {
+            if (!searchText || searchText.length < 2) {
                 dropdown.style.display = 'none';
                 return;
             }
             
-            const filterUpper = filter.toUpperCase();
+            const searchUpper = searchText.toUpperCase();
             const matchedModels = Object.keys(allModels)
-                .filter(model => model.toUpperCase().includes(filterUpper))
+                .filter(model => model.toUpperCase().includes(searchUpper))
                 .sort();
             
             if (matchedModels.length === 0) {
@@ -191,7 +182,7 @@
                 return;
             }
             
-            matchedModels.forEach((model, index) => {
+            matchedModels.forEach(model => {
                 const item = document.createElement('div');
                 item.className = 'dropdown-item';
                 item.textContent = model;
@@ -203,43 +194,6 @@
             });
             
             dropdown.style.display = 'block';
-            activeDropdownItem = -1;
-        }
-
-        // 键盘导航
-        function handleKeyNavigation(e) {
-            const dropdown = document.getElementById('modelDropdown');
-            const items = dropdown.getElementsByClassName('dropdown-item');
-            
-            if (!dropdown.style.display || dropdown.style.display === 'none') return;
-            
-            // 向下箭头
-            if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                if (activeDropdownItem < items.length - 1) {
-                    if (activeDropdownItem >= 0) {
-                        items[activeDropdownItem].classList.remove('highlighted');
-                    }
-                    activeDropdownItem++;
-                    items[activeDropdownItem].classList.add('highlighted');
-                    items[activeDropdownItem].scrollIntoView({ block: 'nearest' });
-                }
-            }
-            // 向上箭头
-            else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                if (activeDropdownItem > 0) {
-                    items[activeDropdownItem].classList.remove('highlighted');
-                    activeDropdownItem--;
-                    items[activeDropdownItem].classList.add('highlighted');
-                    items[activeDropdownItem].scrollIntoView({ block: 'nearest' });
-                }
-            }
-            // 回车选择
-            else if (e.key === 'Enter' && activeDropdownItem >= 0) {
-                e.preventDefault();
-                items[activeDropdownItem].click();
-            }
         }
 
         // 查询回收价格
@@ -272,36 +226,29 @@
             }
         }
 
-        // 初始化事件监听
-        function initEventListeners() {
-            const modelInput = document.getElementById('modelInput');
-            
-            modelInput.addEventListener('input', () => {
-                showDropdown(modelInput.value.trim());
+        // 初始化事件
+        function init() {
+            document.getElementById('modelInput').addEventListener('input', (e) => {
+                showSuggestions(e.target.value.trim());
             });
             
-            modelInput.addEventListener('keydown', (e) => {
-                handleKeyNavigation(e);
-                
-                // 回车键查询
-                if (e.key === 'Enter' && activeDropdownItem === -1) {
-                    getTradeInValue();
-                }
-            });
-            
-            // 点击其他地方关闭下拉
             document.addEventListener('click', (e) => {
                 if (e.target.id !== 'modelInput') {
                     document.getElementById('modelDropdown').style.display = 'none';
+                }
+            });
+            
+            document.getElementById('modelInput').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    getTradeInValue();
                 }
             });
         }
 
         // 页面加载
         window.onload = async () => {
-            await loadModelData();
-            initEventListeners();
-            document.getElementById('modelInput').focus();
+            await loadFromYourGoogleSheet();
+            init();
         };
     </script>
 </body>
