@@ -80,10 +80,10 @@
     <img src="https://siangelectricals.github.io/trade-in-calculator/logo.png" alt="Company Logo" class="logo">
     <h2>Xchange+ Value Checker</h2>
 
-    <input type="text" id="modelInput" placeholder="Enter model name (e.g. OLED77, OLED65)">
+    <input type="text" id="modelInput" placeholder="[Search Your Model]">
     <div id="modelDropdown"></div>
 
-    <button onclick="getTradeInValue()">Check Trade-In Value</button>
+    <button onclick="getTradeInValue()">Xchange Now</button>
     <div id="result"></div>
 
     <script>
@@ -167,12 +167,12 @@
             const resultDiv = document.getElementById('result');
 
             if (!model) {
-                resultDiv.textContent = "Please enter a model name.";
+                resultDiv.textContent = "Please enter your model.";
                 return;
             }
 
             if (allModels[model] !== undefined) {
-                resultDiv.textContent = `${model} Trade-In Value: RM ${allModels[model]}`;
+                resultDiv.textContent = `Trade-In Value: RM ${allModels[model]}`;
             } else {
                 const similar = Object.keys(allModels).filter(m => 
                     m.toUpperCase().includes(model.toUpperCase()));
