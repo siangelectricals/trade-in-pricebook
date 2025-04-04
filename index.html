@@ -4,19 +4,13 @@
     <title>Product Trade-In Price Query System</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
+            font-family: "Times New Roman", serif;
             padding: 20px;
             max-width: 600px;
             margin: 0 auto;
             background-color: #fff;
             font-size: 28px;
             text-align: center;
-        }
-        .container {
-            background: white;
-            padding: 25px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
         h2 {
             font-size: 50px;
@@ -101,18 +95,16 @@
 </head>
 <body>
     <img src="https://siangelectricals.github.io/trade-in-calculator/logo.png" alt="Company Logo" class="logo">
-    <div class="container">
-        <h2>Product Trade-In Price Query System</h2>
-        <div id="status">Connecting to Google Drive data...</div>
+    <h2>Product Trade-In Price Query System</h2>
+    <div id="status">Connecting to Google Drive data...</div>
 
-        <div class="search-box">
-            <input type="text" id="modelInput" placeholder="Enter product model (e.g., iPhone15, OLED77)">
-            <div id="modelDropdown"></div>
-        </div>
-
-        <button onclick="getTradeInValue()">Check Trade-In Price</button>
-        <div id="result"></div>
+    <div class="search-box">
+        <input type="text" id="modelInput" placeholder="Enter product model (e.g., iPhone15, OLED77)">
+        <div id="modelDropdown"></div>
     </div>
+
+    <button onclick="getTradeInValue()">Check Trade-In Price</button>
+    <div id="result"></div>
 
     <script>
         let allModels = {};
