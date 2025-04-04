@@ -1,57 +1,65 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Product Trade-In Price Query System</title>
+    <title>Xchange+ : Trade-In Value Checker</title>
     <style>
         body {
-            font-family: "Times New Roman", serif;
-            padding: 20px;
-            max-width: 600px;
-            margin: 0 auto;
-            background-color: #fff;
+            font-family: 'Times New Roman', serif;
             font-size: 28px;
             text-align: center;
+            background-color: white;
+            padding: 20px;
+        }
+        .logo {
+            display: block;
+            margin: 0 auto 10px auto;
+            width: 180px;
         }
         h2 {
             font-size: 50px;
             font-weight: bold;
-            color: #2c3e50;
-            margin-bottom: 25px;
+            margin: 10px 0 30px 0;
         }
-        .logo {
-            display: block;
-            margin: 0 auto;
-            width: 180px;
-        }
-        #status {
-            color: #7f8c8d;
-            margin-bottom: 15px;
-            font-style: italic;
-        }
-        .search-box {
-            position: relative;
-            margin-bottom: 15px;
-        }
-        #modelInput {
-            padding: 12px 15px;
+        input {
             font-size: 28px;
+            padding: 10px;
             width: 75%;
             max-width: 450px;
-            border: 1px solid #ddd;
+            margin: 10px auto;
+            display: block;
+            border: 1px solid #ccc;
             border-radius: 4px;
-            box-sizing: border-box;
+        }
+        button {
+            font-size: 32px;
+            font-weight: bold;
+            padding: 12px;
+            width: 75%;
+            max-width: 450px;
+            background-color: #888;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            margin-top: 15px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #666;
         }
         #modelDropdown {
             position: absolute;
-            width: 100%;
+            width: 75%;
+            max-width: 450px;
+            left: 50%;
+            transform: translateX(-50%);
             max-height: 300px;
             overflow-y: auto;
             border: 1px solid #ddd;
             border-top: none;
-            border-radius: 0 0 4px 4px;
             background: white;
             z-index: 100;
             display: none;
+            text-align: left;
         }
         .dropdown-item {
             padding: 10px 15px;
@@ -61,79 +69,44 @@
         .dropdown-item:hover {
             background-color: #f8f9fa;
         }
-        button {
-            width: 100%;
-            padding: 12px;
-            font-size: 32px;
-            font-weight: bold;
-            background-color: #95a5a6;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }
-        button:hover {
-            background-color: #7f8c8d;
-        }
         #result {
-            margin-top: 20px;
-            padding: 15px;
-            background-color: #f8f9fa;
-            border-radius: 4px;
-            font-size: 18px;
-            text-align: center;
-        }
-        .final-price {
-            font-size: 50px;
+            margin-top: 25px;
+            font-size: 28px;
             font-weight: bold;
-            color: #555;
-            margin-top: 20px;
-            text-decoration: underline;
         }
     </style>
 </head>
 <body>
     <img src="https://siangelectricals.github.io/trade-in-calculator/logo.png" alt="Company Logo" class="logo">
-    <h2>Product Trade-In Price Query System</h2>
-    <div id="status">Connecting to Google Drive data...</div>
+    <h2>Trade-In Value Checker</h2>
 
-    <div class="search-box">
-        <input type="text" id="modelInput" placeholder="Enter product model (e.g., iPhone15, OLED77)">
-        <div id="modelDropdown"></div>
-    </div>
+    <input type="text" id="modelInput" placeholder="Enter model name (e.g. iPhone15, OLED77)">
+    <div id="modelDropdown"></div>
 
-    <button onclick="getTradeInValue()">Check Trade-In Price</button>
+    <button onclick="getTradeInValue()">Check Trade-In Value</button>
     <div id="result"></div>
 
     <script>
         let allModels = {};
         let dataLoaded = false;
 
-        async function loadFromYourGoogleSheet() {
-            const YOUR_SHEET_ID = "1gnP-PbAv3SkOYN101L6MJKXv8iUw13PK2NRSKnj34JQ";
-            const YOUR_SHEET_NAME = "master";
-            const url = `https://opensheet.elk.sh/${YOUR_SHEET_ID}/${YOUR_SHEET_NAME}`;
-            
+        async function loadFromGoogleSheet() {
+            const SHEET_ID = "1gnP-PbAv3SkOYN101L6MJKXv8iUw13PK2NRSKnj34JQ";
+            const SHEET_NAME = "master";
+            const url = `https://opensheet.elk.sh/${SHEET_ID}/${SHEET_NAME}`;
+
             try {
-                document.getElementById('status').textContent = "Loading data from your Google Drive...";
                 const response = await fetch(url);
-                
-                if (!response.ok) {
-                    throw new Error(`Unable to access your Google Sheet: HTTP ${response.status}`);
-                }
-                
+                if (!response.ok) throw new Error(`Failed to load: HTTP ${response.status}`);
                 const data = await response.json();
-                
-                if (!Array.isArray(data) || data.length === 0) {
-                    throw new Error("Your sheet has no data or is improperly formatted.");
-                }
-                
+
+                if (!Array.isArray(data) || data.length === 0) throw new Error("No data found");
+
                 const firstRow = data[0];
                 if (!firstRow['Sales model'] || !firstRow['Trade In Value']) {
-                    throw new Error("Your sheet must contain 'Sales model' and 'Trade In Value' columns.");
+                    throw new Error("Missing 'Sales model' or 'Trade In Value' column");
                 }
-                
+
                 allModels = {};
                 data.forEach(row => {
                     const model = row['Sales model']?.toString().trim();
@@ -143,40 +116,34 @@
                     }
                 });
 
-                if (Object.keys(allModels).length === 0) {
-                    throw new Error("No valid model and price data found.");
-                }
+                if (Object.keys(allModels).length === 0) throw new Error("No valid model/value pairs");
 
                 dataLoaded = true;
-                document.getElementById('status').textContent = `Loaded ${Object.keys(allModels).length} product models`;
-
             } catch (error) {
-                console.error("Failed to load your data:", error);
-                document.getElementById('status').textContent = `Error: ${error.message} (Please ensure the sheet is shared)`;
-                document.getElementById('result').textContent = "Unable to load data, please check your Google Sheet settings.";
+                console.error("Error loading data:", error);
+                document.getElementById('result').textContent = "Unable to load data. Please check Google Sheet settings.";
             }
         }
 
         function showSuggestions(searchText) {
             const dropdown = document.getElementById('modelDropdown');
             dropdown.innerHTML = '';
-
+            
             if (!searchText || searchText.length < 2) {
                 dropdown.style.display = 'none';
                 return;
             }
 
             const searchUpper = searchText.toUpperCase();
-            const matchedModels = Object.keys(allModels)
-                .filter(model => model.toUpperCase().includes(searchUpper))
-                .sort();
+            const matched = Object.keys(allModels).filter(model =>
+                model.toUpperCase().includes(searchUpper)).sort();
 
-            if (matchedModels.length === 0) {
+            if (matched.length === 0) {
                 dropdown.style.display = 'none';
                 return;
             }
 
-            matchedModels.forEach(model => {
+            matched.forEach(model => {
                 const item = document.createElement('div');
                 item.className = 'dropdown-item';
                 item.textContent = model;
@@ -192,7 +159,7 @@
 
         function getTradeInValue() {
             if (!dataLoaded) {
-                document.getElementById('result').textContent = "Data is still loading, please wait...";
+                document.getElementById('result').textContent = "Data not loaded yet. Please wait...";
                 return;
             }
 
@@ -200,44 +167,41 @@
             const resultDiv = document.getElementById('result');
 
             if (!model) {
-                resultDiv.textContent = "Please enter a product model.";
+                resultDiv.textContent = "Please enter a model name.";
                 return;
             }
 
             if (allModels[model] !== undefined) {
-                resultDiv.textContent = `${model}'s Trade-In Price: RM ${allModels[model]}`;
+                resultDiv.textContent = `${model} Trade-In Value: RM ${allModels[model]}`;
             } else {
-                const similar = Object.keys(allModels)
-                    .filter(m => m.toUpperCase().includes(model.toUpperCase()));
-
+                const similar = Object.keys(allModels).filter(m => 
+                    m.toUpperCase().includes(model.toUpperCase()));
                 if (similar.length > 0) {
-                    resultDiv.innerHTML = `No exact match found. You may want to check for:<br>${similar.slice(0, 5).join('<br>')}`;
+                    resultDiv.innerHTML = `No exact match. Did you mean:<br>${similar.slice(0, 5).join('<br>')}`;
                 } else {
-                    resultDiv.textContent = "No matching model found, please check your input.";
+                    resultDiv.textContent = "No matching model found.";
                 }
             }
         }
 
         function init() {
-            document.getElementById('modelInput').addEventListener('input', (e) => {
+            document.getElementById('modelInput').addEventListener('input', e => {
                 showSuggestions(e.target.value.trim());
             });
 
-            document.addEventListener('click', (e) => {
+            document.addEventListener('click', e => {
                 if (e.target.id !== 'modelInput') {
                     document.getElementById('modelDropdown').style.display = 'none';
                 }
             });
 
-            document.getElementById('modelInput').addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    getTradeInValue();
-                }
+            document.getElementById('modelInput').addEventListener('keypress', e => {
+                if (e.key === 'Enter') getTradeInValue();
             });
         }
 
         window.onload = async () => {
-            await loadFromYourGoogleSheet();
+            await loadFromGoogleSheet();
             init();
         };
     </script>
