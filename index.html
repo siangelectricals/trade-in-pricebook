@@ -36,15 +36,15 @@
             padding: 12px;
             width: 75%;
             max-width: 450px;
-            background-color: #888;
-            color: white;
-            border: none;
+            background-color: #eee;
+            color: black;
+            border: 1px solid black;
             border-radius: 4px;
             margin-top: 15px;
             cursor: pointer;
         }
         button:hover {
-            background-color: #666;
+            background-color: #ddd;
         }
         #modelDropdown {
             position: absolute;
@@ -71,8 +71,11 @@
         }
         #result {
             margin-top: 25px;
-            font-size: 28px;
-            font-weight: bold;
+            font-size: 36px; /* Bigger font for result text */
+            font-weight: normal;
+        }
+        #result strong {
+            font-weight: bold; /* Bold for value */
         }
     </style>
 </head>
@@ -172,7 +175,7 @@
             }
 
             if (allModels[model] !== undefined) {
-                resultDiv.textContent = `Trade-In Value: RM ${allModels[model]}`;
+                resultDiv.innerHTML = `Trade-In Value: <strong>RM ${allModels[model]}</strong>`;
             } else {
                 const similar = Object.keys(allModels).filter(m => 
                     m.toUpperCase().includes(model.toUpperCase()));
