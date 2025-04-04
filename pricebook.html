@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Trade-In Value Search</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f6f6f6;
+            text-align: center;
+            padding: 40px;
+            font-size: 20px;
+        }
+        .search-container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 15px rgba(0,0,0,0.1);
+            max-width: 500px;
+            margin: auto;
+        }
+        input, datalist {
+            font-size: 20px;
+            padding: 10px;
+            width: 100%;
+            margin-top: 10px;
+        }
+        #result {
+            margin-top: 20px;
+            font-weight: bold;
+            color: #333;
+            font-size: 24px;
+        }
+    </style>
+</head>
+<body>
+    <div class="search-container">
+        <h2>Trade-In Value Lookup</h2>
+        <input list="models" id="modelInput" placeholder="Enter or select model code...">
+        <datalist id="models"></datalist>
+        <button onclick="lookupValue()">Check Value</button>
+        <div id="result"></div>
+    </div>
+
+    <script>
+        let modelData = {};
+
+        async function loadGoogleSheet() {
+            const sheetID = 1gnP-PbAv3SkOYN101L6MJKXv8iUw13PK2NRSKnj34JQ; // replace with actual Sheet ID
+            const sheetName = "master"; // adjust if needed
+            const url = `https://opensheet.elk.sh/${sheetID}/${sheetName}`;
+
+            try {
+                const response = await fetch(url);
+                const json = await response.json();
+
+                const datalist = document.getElementById("models");
+                json.forEach(row => {
+                    const model = row["Sales model"]?.trim();
+                    const value = parseFloat(row["Trade In Value"]);
+                    if (model && !isNaN(value)) {
+                        modelData[model] = value;
+                        const option = document.createElement("option");
+                        option.value = model;
+                        datalist.appendChild(option);
+                    }
+                });
+            } catch (error) {
+                console.error("Error loading sheet:", error);
+            }
+        }
+
+        function lookupValue() {
+            const model = document.getElementById("modelInput").value.trim();
+            const value = modelData[model];
+            const result = document.getElementById("result");
+            if (value !== undefined) {
+                result.textContent = `Trade-In Value for ${model}: RM ${value}`;
+            } else {
+                result.textContent = "Model not found. Please try again.";
+            }
+        }
+
+        window.onload = loadGoogleSheet;
+    </script>
+</body>
+</html>
