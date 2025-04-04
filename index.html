@@ -7,6 +7,7 @@
             font-size: 28px;
             text-align: center;
             font-family: Arial, sans-serif;
+            padding: 20px;
         }
         .logo {
             display: block;
@@ -16,15 +17,17 @@
         .header {
             font-size: 50px;
             font-weight: bold;
-            margin-top: 20px;
+            margin: 20px 0;
             color: #333;
         }
-        input, button {
+        input {
             font-size: 28px;
             padding: 10px;
-            margin: 8px;
-            width: 75%;
-            max-width: 450px;
+            margin: 10px 0;
+            width: 80%;
+            max-width: 500px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
         }
         button {
             font-size: 32px;
@@ -33,27 +36,31 @@
             color: white;
             border: none;
             border-radius: 5px;
+            padding: 12px 30px;
+            margin: 20px 0;
             cursor: pointer;
         }
         #result {
             font-size: 36px;
             font-weight: bold;
-            margin-top: 20px;
+            margin: 30px 0;
             color: #555;
             min-height: 50px;
         }
         #modelDropdown {
-            width: 75%;
-            max-width: 450px;
+            width: 80%;
+            max-width: 500px;
             margin: 0 auto;
-            border: 1px solid #ddd;
+            border: 2px solid #ddd;
+            border-top: none;
+            border-radius: 0 0 5px 5px;
             max-height: 300px;
             overflow-y: auto;
             display: none;
             text-align: left;
         }
         .dropdown-item {
-            padding: 10px;
+            padding: 12px;
             cursor: pointer;
             border-bottom: 1px solid #eee;
         }
@@ -66,38 +73,23 @@
     <img src="https://siangelectricals.github.io/trade-in-calculator/logo.png" alt="Company Logo" class="logo">
     <h2 class="header">Trade-In Value</h2>
     
-    <input type="text" id="modelInput" placeholder="Enter model code...">
+    <input type="text" id="modelInput" placeholder="Enter product model...">
     <div id="modelDropdown"></div>
     <button onclick="lookupValue()">Check Value</button>
     <div id="result"></div>
 
     <script>
-        // 配置您的Google Sheet信息
-        const SHEET_ID = "1gnP-PbAv3SkOYN101L6MJKXv8iUw13PK2NRSKnj34JQ";
-        const SHEET_NAME = "master";
-        const API_URL = `https://opensheet.elk.sh/${SHEET_ID}/${SHEET_NAME}`;
-        
-        let modelData = {};
-
-        // 从Google Sheet加载数据
-        async function loadData() {
-            try {
-                const response = await fetch(API_URL);
-                const data = await response.json();
-                
-                data.forEach(row => {
-                    const model = row['Sales model']?.trim();
-                    const value = parseFloat(row['Trade In Value']);
-                    if (model && !isNaN(value)) {
-                        modelData[model] = value;
-                    }
-                });
-                
-            } catch (error) {
-                document.getElementById('result').textContent = "Failed to load data";
-                console.error(error);
-            }
-        }
+        // 产品数据 - 实际使用时替换为从Google Sheet加载
+        const modelData = {
+            "iPhone 15 Pro 128GB": 3200,
+            "iPhone 15 Pro 256GB": 3500,
+            "Galaxy S23 Ultra 256GB": 3000,
+            "Galaxy S22 Ultra 256GB": 2500,
+            "OLED77G4PSA": 4500,
+            "OLED77C4PSA": 4200,
+            "MacBook Pro M2 14": 4200,
+            "MacBook Air M2": 3800
+        };
 
         // 显示匹配型号
         function showMatches(searchText) {
@@ -137,7 +129,7 @@
             const resultDiv = document.getElementById('result');
             
             if (!model) {
-                resultDiv.textContent = "Please enter a model";
+                resultDiv.textContent = "Please enter a product model";
                 return;
             }
             
@@ -149,14 +141,14 @@
                     .filter(m => m.toUpperCase().includes(model.toUpperCase()));
                 
                 if (similar.length > 0) {
-                    resultDiv.innerHTML = `Not found. Similar models:<br>${similar.slice(0, 3).join('<br>')}`;
+                    resultDiv.innerHTML = `Model not found. Did you mean:<br>${similar.slice(0, 3).join('<br>')}`;
                 } else {
-                    resultDiv.textContent = "Model not found";
+                    resultDiv.textContent = "Product model not found";
                 }
             }
         }
 
-        // 初始化
+        // 初始化事件
         document.getElementById('modelInput').addEventListener('input', (e) => {
             showMatches(e.target.value);
         });
@@ -168,10 +160,13 @@
         });
         
         document.getElementById('modelInput').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') lookupValue();
+            if (e.key === 'Enter') {
+                lookupValue();
+            }
         });
 
-        loadData();
+        // 自动聚焦到输入框
+        document.getElementById('modelInput').focus();
     </script>
 </body>
 </html>
