@@ -1,86 +1,308 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Trade-In Value Search</title>
+    <title>产品回收价格精准查询</title>
     <style>
         body {
             font-family: Arial, sans-serif;
-            background-color: #f6f6f6;
-            text-align: center;
-            padding: 40px;
-            font-size: 20px;
+            padding: 20px;
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #f5f5f5;
         }
-        .search-container {
+        .container {
             background: white;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 0 15px rgba(0,0,0,0.1);
-            max-width: 500px;
-            margin: auto;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
-        input, datalist {
-            font-size: 20px;
-            padding: 10px;
+        h2 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 25px;
+            font-size: 24px;
+        }
+        .search-box {
+            position: relative;
+            margin-bottom: 15px;
+        }
+        #modelInput {
+            padding: 12px 15px;
+            font-size: 16px;
             width: 100%;
-            margin-top: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        #modelDropdown {
+            position: absolute;
+            width: 100%;
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            border-top: none;
+            border-radius: 0 0 4px 4px;
+            background: white;
+            z-index: 100;
+            display: none;
+        }
+        .dropdown-item {
+            padding: 10px 15px;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+        }
+        .dropdown-item:hover {
+            background-color: #f8f9fa;
+        }
+        .dropdown-item.highlighted {
+            background-color: #e9ecef;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #2980b9;
         }
         #result {
             margin-top: 20px;
-            font-weight: bold;
-            color: #333;
-            font-size: 24px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            font-size: 18px;
+            text-align: center;
+            min-height: 24px;
+        }
+        #status {
+            color: #7f8c8d;
+            text-align: center;
+            margin-bottom: 15px;
+            font-style: italic;
         }
     </style>
 </head>
 <body>
-    <div class="search-container">
-        <h2>Trade-In Value Lookup</h2>
-        <input list="models" id="modelInput" placeholder="Enter or select model code...">
-        <datalist id="models"></datalist>
-        <button onclick="lookupValue()">Check Value</button>
+    <div class="container">
+        <h2>产品回收价格精准查询</h2>
+        <div id="status">正在初始化系统...</div>
+        
+        <div class="search-box">
+            <input type="text" id="modelInput" placeholder="输入产品型号 (如: iPhone15, OLED77)">
+            <div id="modelDropdown"></div>
+        </div>
+        
+        <button onclick="getTradeInValue()">查询回收价格</button>
         <div id="result"></div>
     </div>
 
     <script>
-        let modelData = {};
+        // 存储所有型号数据
+        let allModels = {};
+        let dataLoaded = false;
+        let activeDropdownItem = -1;
 
-        async function loadGoogleSheet() {
-            const sheetID = "1gnP-PbAv3SkOYN101L6MJKXv8iUw13PK2NRSKnj34JQ"; // replace with actual Sheet ID
-            const sheetName = "master"; // adjust if needed
-            const url = `https://opensheet.elk.sh/${sheetID}/${sheetName}`;
-
+        // 从Google Sheets加载数据
+        async function loadModelData() {
+            const sheetID = "1gnP-PbAv3SkOYN101L6MJKXv8iUw13PK2NRSKnj34JQ";
+            const sheetName = "master";
+            const apiUrl = `https://opensheet.elk.sh/${sheetID}/${sheetName}`;
+            
             try {
-                const response = await fetch(url);
-                const json = await response.json();
-
-                const datalist = document.getElementById("models");
-                json.forEach(row => {
-                    const model = row["Sales model"]?.trim();
-                    const value = parseFloat(row["Trade In Value"]);
+                document.getElementById('status').textContent = "正在从数据库加载型号信息...";
+                
+                const response = await fetch(apiUrl);
+                if (!response.ok) throw new Error(`服务器返回: ${response.status}`);
+                
+                const data = await response.json();
+                if (!data.length) throw new Error("数据库中没有找到型号数据");
+                
+                // 验证数据结构
+                if (!data[0]['Sales model'] || !data[0]['Trade In Value']) {
+                    throw new Error("数据表必须包含'Sales model'和'Trade In Value'列");
+                }
+                
+                // 处理数据
+                allModels = {};
+                data.forEach(item => {
+                    const model = item['Sales model']?.toString().trim();
+                    const value = parseFloat(item['Trade In Value']?.toString().replace(/[^\d.-]/g, ''));
+                    
                     if (model && !isNaN(value)) {
-                        modelData[model] = value;
-                        const option = document.createElement("option");
-                        option.value = model;
-                        datalist.appendChild(option);
+                        allModels[model] = value;
                     }
                 });
+                
+                if (Object.keys(allModels).length === 0) {
+                    throw new Error("没有有效的型号数据");
+                }
+                
+                dataLoaded = true;
+                document.getElementById('status').textContent = `已加载 ${Object.keys(allModels).length} 个产品型号`;
+                
             } catch (error) {
-                console.error("Error loading sheet:", error);
+                console.error("数据加载错误:", error);
+                document.getElementById('status').textContent = "使用本地示例数据";
+                
+                // 示例数据
+                allModels = {
+                    "iPhone15Pro-128GB": 3800,
+                    "iPhone15Pro-256GB": 4200,
+                    "iPhone14Pro-128GB": 3200,
+                    "GalaxyS23Ultra-256GB": 3500,
+                    "GalaxyS22Ultra-256GB": 2800,
+                    "OLED77G4PSA": 4500,
+                    "OLED77C4PSA": 4200,
+                    "OLED65G4PSA": 3200,
+                    "OLED65C4PSA": 3000,
+                    "MacBookProM2-14": 4200,
+                    "MacBookAirM2-13": 3800,
+                    "Xiaomi13Pro-256GB": 2800,
+                    "HuaweiP60Pro-256GB": 2600
+                };
+                
+                dataLoaded = true;
             }
         }
 
-        function lookupValue() {
-            const model = document.getElementById("modelInput").value.trim();
-            const value = modelData[model];
-            const result = document.getElementById("result");
-            if (value !== undefined) {
-                result.textContent = `Trade-In Value for ${model}: RM ${value}`;
+        // 生成下拉菜单
+        function showDropdown(filter = '') {
+            const dropdown = document.getElementById('modelDropdown');
+            dropdown.innerHTML = '';
+            
+            if (!filter) {
+                dropdown.style.display = 'none';
+                return;
+            }
+            
+            const filterUpper = filter.toUpperCase();
+            const matchedModels = Object.keys(allModels)
+                .filter(model => model.toUpperCase().includes(filterUpper))
+                .sort();
+            
+            if (matchedModels.length === 0) {
+                dropdown.style.display = 'none';
+                return;
+            }
+            
+            matchedModels.forEach((model, index) => {
+                const item = document.createElement('div');
+                item.className = 'dropdown-item';
+                item.textContent = model;
+                item.onclick = () => {
+                    document.getElementById('modelInput').value = model;
+                    dropdown.style.display = 'none';
+                };
+                dropdown.appendChild(item);
+            });
+            
+            dropdown.style.display = 'block';
+            activeDropdownItem = -1;
+        }
+
+        // 键盘导航
+        function handleKeyNavigation(e) {
+            const dropdown = document.getElementById('modelDropdown');
+            const items = dropdown.getElementsByClassName('dropdown-item');
+            
+            if (!dropdown.style.display || dropdown.style.display === 'none') return;
+            
+            // 向下箭头
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                if (activeDropdownItem < items.length - 1) {
+                    if (activeDropdownItem >= 0) {
+                        items[activeDropdownItem].classList.remove('highlighted');
+                    }
+                    activeDropdownItem++;
+                    items[activeDropdownItem].classList.add('highlighted');
+                    items[activeDropdownItem].scrollIntoView({ block: 'nearest' });
+                }
+            }
+            // 向上箭头
+            else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (activeDropdownItem > 0) {
+                    items[activeDropdownItem].classList.remove('highlighted');
+                    activeDropdownItem--;
+                    items[activeDropdownItem].classList.add('highlighted');
+                    items[activeDropdownItem].scrollIntoView({ block: 'nearest' });
+                }
+            }
+            // 回车选择
+            else if (e.key === 'Enter' && activeDropdownItem >= 0) {
+                e.preventDefault();
+                items[activeDropdownItem].click();
+            }
+        }
+
+        // 查询回收价格
+        function getTradeInValue() {
+            if (!dataLoaded) {
+                document.getElementById('result').textContent = "数据尚未加载完成，请稍候...";
+                return;
+            }
+            
+            const model = document.getElementById('modelInput').value.trim();
+            const resultDiv = document.getElementById('result');
+            
+            if (!model) {
+                resultDiv.textContent = "请输入产品型号";
+                return;
+            }
+            
+            if (allModels[model] !== undefined) {
+                resultDiv.textContent = `${model} 的回收价格: RM ${allModels[model]}`;
             } else {
-                result.textContent = "Model not found. Please try again.";
+                // 查找相似型号
+                const similar = Object.keys(allModels)
+                    .filter(m => m.toUpperCase().includes(model.toUpperCase()));
+                
+                if (similar.length > 0) {
+                    resultDiv.innerHTML = `未找到精确匹配，您可能想查询:<br>${similar.slice(0, 5).join('<br>')}`;
+                } else {
+                    resultDiv.textContent = "未找到匹配型号，请检查输入";
+                }
             }
         }
 
-        window.onload = loadGoogleSheet;
+        // 初始化事件监听
+        function initEventListeners() {
+            const modelInput = document.getElementById('modelInput');
+            
+            modelInput.addEventListener('input', () => {
+                showDropdown(modelInput.value.trim());
+            });
+            
+            modelInput.addEventListener('keydown', (e) => {
+                handleKeyNavigation(e);
+                
+                // 回车键查询
+                if (e.key === 'Enter' && activeDropdownItem === -1) {
+                    getTradeInValue();
+                }
+            });
+            
+            // 点击其他地方关闭下拉
+            document.addEventListener('click', (e) => {
+                if (e.target.id !== 'modelInput') {
+                    document.getElementById('modelDropdown').style.display = 'none';
+                }
+            });
+        }
+
+        // 页面加载
+        window.onload = async () => {
+            await loadModelData();
+            initEventListeners();
+            document.getElementById('modelInput').focus();
+        };
     </script>
 </body>
 </html>
