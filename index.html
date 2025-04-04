@@ -32,7 +32,7 @@
         button {
             font-size: 32px;
             font-weight: bold;
-            background-color: #4285f4;
+            background-color: #4285f4; /* 与Calculate按钮相同的蓝色 */
             color: white;
             border: none;
             border-radius: 5px;
@@ -63,6 +63,7 @@
             padding: 12px;
             cursor: pointer;
             border-bottom: 1px solid #eee;
+            font-size: 28px; /* 统一字体大小 */
         }
         .dropdown-item:hover {
             background-color: #f5f5f5;
@@ -114,6 +115,7 @@
                     item.onclick = () => {
                         document.getElementById('modelInput').value = model;
                         dropdown.style.display = 'none';
+                        lookupValue(); // 选择后自动查询
                     };
                     dropdown.appendChild(item);
                 });
@@ -149,17 +151,17 @@
         }
 
         // 初始化事件
-        document.getElementById('modelInput').addEventListener('input', (e) => {
-            showMatches(e.target.value);
+        document.getElementById('modelInput').addEventListener('input', function() {
+            showMatches(this.value);
         });
         
-        document.addEventListener('click', (e) => {
+        document.addEventListener('click', function(e) {
             if (e.target.id !== 'modelInput') {
                 document.getElementById('modelDropdown').style.display = 'none';
             }
         });
         
-        document.getElementById('modelInput').addEventListener('keypress', (e) => {
+        document.getElementById('modelInput').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
                 lookupValue();
             }
