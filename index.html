@@ -1,106 +1,169 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Trade-In Value Lookup</title>
+    <title>产品回收价格查询系统</title>
     <style>
         body {
-            font-size: 28px;
-            text-align: center;
             font-family: Arial, sans-serif;
-        }
-        .logo {
-            display: block;
+            padding: 20px;
+            max-width: 600px;
             margin: 0 auto;
-            width: 180px;
+            background-color: #f5f5f5;
         }
-        .header {
-            font-size: 50px;
-            font-weight: bold;
-            margin-top: 20px;
-            color: #333;
+        .container {
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
-        input, button {
-            font-size: 28px;
-            padding: 10px;
-            margin: 8px;
-            width: 75%;
-            max-width: 450px;
+        h2 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 25px;
         }
-        button {
-            font-size: 32px;
-            font-weight: bold;
-            background-color: #4285f4;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
+        .search-box {
+            position: relative;
+            margin-bottom: 15px;
         }
-        #result {
-            font-size: 36px;
-            font-weight: bold;
-            margin-top: 20px;
-            color: #555;
-            min-height: 50px;
+        #modelInput {
+            padding: 12px 15px;
+            font-size: 16px;
+            width: 100%;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
         }
         #modelDropdown {
-            width: 75%;
-            max-width: 450px;
-            margin: 0 auto;
-            border: 1px solid #ddd;
+            position: absolute;
+            width: 100%;
             max-height: 300px;
             overflow-y: auto;
+            border: 1px solid #ddd;
+            border-top: none;
+            border-radius: 0 0 4px 4px;
+            background: white;
+            z-index: 100;
             display: none;
-            text-align: left;
         }
         .dropdown-item {
-            padding: 10px;
+            padding: 10px 15px;
             cursor: pointer;
             border-bottom: 1px solid #eee;
         }
         .dropdown-item:hover {
-            background-color: #f5f5f5;
+            background-color: #f8f9fa;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            font-size: 18px;
+            text-align: center;
+        }
+        #status {
+            color: #7f8c8d;
+            text-align: center;
+            margin-bottom: 15px;
+            font-style: italic;
         }
     </style>
 </head>
 <body>
-    <img src="https://siangelectricals.github.io/trade-in-calculator/logo.png" alt="Company Logo" class="logo">
-    <h2 class="header">Trade-In Value</h2>
-    
-    <input type="text" id="modelInput" placeholder="Enter model code...">
-    <div id="modelDropdown"></div>
-    <button onclick="lookupValue()">Check Value</button>
-    <div id="result"></div>
+    <div class="container">
+        <h2>产品回收价格查询系统</h2>
+        <div id="status">正在连接Google Drive数据...</div>
+        
+        <div class="search-box">
+            <input type="text" id="modelInput" placeholder="输入产品型号 (如: iPhone15, OLED77)">
+            <div id="modelDropdown"></div>
+        </div>
+        
+        <button onclick="getTradeInValue()">查询回收价格</button>
+        <div id="result"></div>
+    </div>
 
     <script>
-        // 配置您的Google Sheet信息
-        const SHEET_ID = "1gnP-PbAv3SkOYN101L6MJKXv8iUw13PK2NRSKnj34JQ";
-        const SHEET_NAME = "master";
-        const API_URL = `https://opensheet.elk.sh/${SHEET_ID}/${SHEET_NAME}`;
-        
-        let modelData = {};
+        // 存储所有型号数据
+        let allModels = {};
+        let dataLoaded = false;
 
-        // 从Google Sheet加载数据
-        async function loadData() {
+        // 从您的Google Sheet加载数据
+        async function loadFromYourGoogleSheet() {
+            // 替换为您的Google Sheet ID
+            const YOUR_SHEET_ID = "1gnP-PbAv3SkOYN101L6MJKXv8iUw13PK2NRSKnj34JQ";
+            // 替换为您的工作表名称
+            const YOUR_SHEET_NAME = "master";
+            
+            // 使用opensheet.elk.sh服务访问您的Google Sheet
+            const url = `https://opensheet.elk.sh/${YOUR_SHEET_ID}/${YOUR_SHEET_NAME}`;
+            
             try {
-                const response = await fetch(API_URL);
+                document.getElementById('status').textContent = "正在从您的Google Drive加载数据...";
+                const response = await fetch(url);
+                
+                if (!response.ok) {
+                    throw new Error(`无法访问您的Google Sheet: HTTP ${response.status}`);
+                }
+                
                 const data = await response.json();
                 
+                // 验证数据格式
+                if (!Array.isArray(data) || data.length === 0) {
+                    throw new Error("您的Sheet中没有数据或格式不正确");
+                }
+                
+                // 检查必要的列
+                const firstRow = data[0];
+                if (!firstRow['Sales model'] || !firstRow['Trade In Value']) {
+                    throw new Error("您的Sheet必须包含'Sales model'和'Trade In Value'列");
+                }
+                
+                // 处理数据
+                allModels = {};
                 data.forEach(row => {
-                    const model = row['Sales model']?.trim();
-                    const value = parseFloat(row['Trade In Value']);
+                    const model = row['Sales model']?.toString().trim();
+                    const value = parseFloat(row['Trade In Value']?.toString().replace(/[^\d.-]/g, ''));
+                    
                     if (model && !isNaN(value)) {
-                        modelData[model] = value;
+                        allModels[model] = value;
                     }
                 });
                 
+                if (Object.keys(allModels).length === 0) {
+                    throw new Error("没有找到有效的型号和价格数据");
+                }
+                
+                dataLoaded = true;
+                document.getElementById('status').textContent = `已加载 ${Object.keys(allModels).length} 个产品型号`;
+                
             } catch (error) {
-                document.getElementById('result').textContent = "Failed to load data";
-                console.error(error);
+                console.error("加载您的数据失败:", error);
+                document.getElementById('status').textContent = 
+                    `错误: ${error.message} (请确保Sheet已共享)`;
+                
+                // 这里不使用任何示例数据，确保完全基于您的Google Drive
+                document.getElementById('result').textContent = 
+                    "系统无法加载数据，请检查您的Google Sheet设置";
             }
         }
 
-        // 显示匹配型号
-        function showMatches(searchText) {
+        // 显示下拉建议
+        function showSuggestions(searchText) {
             const dropdown = document.getElementById('modelDropdown');
             dropdown.innerHTML = '';
             
@@ -110,68 +173,83 @@
             }
             
             const searchUpper = searchText.toUpperCase();
-            const matches = Object.keys(modelData)
+            const matchedModels = Object.keys(allModels)
                 .filter(model => model.toUpperCase().includes(searchUpper))
                 .sort();
-                
-            if (matches.length > 0) {
-                matches.forEach(model => {
-                    const item = document.createElement('div');
-                    item.className = 'dropdown-item';
-                    item.textContent = model;
-                    item.onclick = () => {
-                        document.getElementById('modelInput').value = model;
-                        dropdown.style.display = 'none';
-                    };
-                    dropdown.appendChild(item);
-                });
-                dropdown.style.display = 'block';
-            } else {
+            
+            if (matchedModels.length === 0) {
                 dropdown.style.display = 'none';
+                return;
             }
+            
+            matchedModels.forEach(model => {
+                const item = document.createElement('div');
+                item.className = 'dropdown-item';
+                item.textContent = model;
+                item.onclick = () => {
+                    document.getElementById('modelInput').value = model;
+                    dropdown.style.display = 'none';
+                };
+                dropdown.appendChild(item);
+            });
+            
+            dropdown.style.display = 'block';
         }
 
-        // 查询价格
-        function lookupValue() {
+        // 查询回收价格
+        function getTradeInValue() {
+            if (!dataLoaded) {
+                document.getElementById('result').textContent = "数据尚未加载完成，请稍候...";
+                return;
+            }
+            
             const model = document.getElementById('modelInput').value.trim();
             const resultDiv = document.getElementById('result');
             
             if (!model) {
-                resultDiv.textContent = "Please enter a model";
+                resultDiv.textContent = "请输入产品型号";
                 return;
             }
             
-            if (modelData[model]) {
-                resultDiv.textContent = `${model}: RM ${modelData[model]}`;
+            if (allModels[model] !== undefined) {
+                resultDiv.textContent = `${model} 的回收价格: RM ${allModels[model]}`;
             } else {
                 // 查找相似型号
-                const similar = Object.keys(modelData)
+                const similar = Object.keys(allModels)
                     .filter(m => m.toUpperCase().includes(model.toUpperCase()));
                 
                 if (similar.length > 0) {
-                    resultDiv.innerHTML = `Not found. Similar models:<br>${similar.slice(0, 3).join('<br>')}`;
+                    resultDiv.innerHTML = `未找到精确匹配，您可能想查询:<br>${similar.slice(0, 5).join('<br>')}`;
                 } else {
-                    resultDiv.textContent = "Model not found";
+                    resultDiv.textContent = "未找到匹配型号，请检查输入";
                 }
             }
         }
 
-        // 初始化
-        document.getElementById('modelInput').addEventListener('input', (e) => {
-            showMatches(e.target.value);
-        });
-        
-        document.addEventListener('click', (e) => {
-            if (e.target.id !== 'modelInput') {
-                document.getElementById('modelDropdown').style.display = 'none';
-            }
-        });
-        
-        document.getElementById('modelInput').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') lookupValue();
-        });
+        // 初始化事件
+        function init() {
+            document.getElementById('modelInput').addEventListener('input', (e) => {
+                showSuggestions(e.target.value.trim());
+            });
+            
+            document.addEventListener('click', (e) => {
+                if (e.target.id !== 'modelInput') {
+                    document.getElementById('modelDropdown').style.display = 'none';
+                }
+            });
+            
+            document.getElementById('modelInput').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    getTradeInValue();
+                }
+            });
+        }
 
-        loadData();
+        // 页面加载
+        window.onload = async () => {
+            await loadFromYourGoogleSheet();
+            init();
+        };
     </script>
 </body>
 </html>
