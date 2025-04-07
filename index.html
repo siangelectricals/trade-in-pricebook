@@ -71,23 +71,39 @@
         }
         #result {
             margin-top: 25px;
-            font-size: 36px; /* Bigger font for result text */
+            font-size: 36px;
             font-weight: normal;
         }
         #result strong {
-            font-weight: bold; /* Bold for value */
+            font-weight: bold;
+        }
+        .password-section {
+            display: block;
+        }
+        .calculator-section {
+            display: none;
         }
     </style>
 </head>
 <body>
-    <img src="https://siangelectricals.github.io/trade-in-calculator/logo.png" alt="Company Logo" class="logo">
+    <img src="https://siangelectricals.github.io/xchange-calculator/logo.png" alt="Company Logo" class="logo">
     <h2>Xchange+ Value Checker</h2>
 
-    <input type="text" id="modelInput" placeholder="[Search Your Model]">
-    <div id="modelDropdown"></div>
+    <!-- Password section -->
+    <div class="password-section">
+        <label>Password:</label><br>
+        <input type="password" id="password" step="1"><br><br>
+        <button onclick="checkPassword()">Submit</button>
+    </div>
 
-    <button onclick="getTradeInValue()">Xchange Now</button>
-    <div id="result"></div>
+    <!-- Calculator section -->
+    <div class="calculator-section">
+        <input type="text" id="modelInput" placeholder="[Search Your Model]">
+        <div id="modelDropdown"></div>
+
+        <button onclick="getTradeInValue()">Xchange Now</button>
+        <div id="result"></div>
+    </div>
 
     <script>
         let allModels = {};
@@ -175,7 +191,7 @@
             }
 
             if (allModels[model] !== undefined) {
-                resultDiv.innerHTML = `Trade-In Value: <strong>RM ${allModels[model]}</strong>`;
+                resultDiv.innerHTML = `Xchange Value: <strong>RM ${allModels[model]}</strong>`;
             } else {
                 const similar = Object.keys(allModels).filter(m => 
                     m.toUpperCase().includes(model.toUpperCase()));
@@ -184,6 +200,18 @@
                 } else {
                     resultDiv.textContent = "No matching model found.";
                 }
+            }
+        }
+
+        function checkPassword() {
+            const password = document.getElementById("password").value;
+            const correctPassword = "Xchange8410";  // Set the correct password here
+            
+            if (password === correctPassword) {
+                document.querySelector(".password-section").style.display = "none";
+                document.querySelector(".calculator-section").style.display = "block";
+            } else {
+                alert("Incorrect password. Please try again.");
             }
         }
 
