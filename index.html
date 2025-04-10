@@ -122,7 +122,7 @@
                 if (!Array.isArray(data) || data.length === 0) throw new Error("No data found");
 
                 const firstRow = data[0];
-                if (!firstRow['Sales model'] || !firstRow['Trade In Value']) {
+                if (!firstRow['Sales model'] || !firstRow['Xchange+ Value']) {
                     throw new Error("Missing 'Sales model' or 'Xchange+ Value' column");
                 }
 
