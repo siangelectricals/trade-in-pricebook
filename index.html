@@ -101,7 +101,7 @@
         <input type="text" id="modelInput" placeholder="[Search Your Model]">
         <div id="modelDropdown"></div>
 
-        <button onclick="getTradeInValue()">Xchange Now</button>
+        <button onclick="getTradeInValue()">Xchange+ Now</button>
         <div id="result"></div>
     </div>
 
@@ -123,13 +123,13 @@
 
                 const firstRow = data[0];
                 if (!firstRow['Sales model'] || !firstRow['Trade In Value']) {
-                    throw new Error("Missing 'Sales model' or 'Trade In Value' column");
+                    throw new Error("Missing 'Sales model' or 'Xchange+ Value' column");
                 }
 
                 allModels = {};
                 data.forEach(row => {
                     const model = row['Sales model']?.toString().trim();
-                    const value = parseFloat(row['Trade In Value']?.toString().replace(/[^\d.-]/g, ''));
+                    const value = parseFloat(row['Xchange+ Value']?.toString().replace(/[^\d.-]/g, ''));
                     if (model && !isNaN(value)) {
                         allModels[model] = value;
                     }
@@ -191,7 +191,7 @@
             }
 
             if (allModels[model] !== undefined) {
-                resultDiv.innerHTML = `Xchange Value: <strong>RM ${allModels[model]}</strong>`;
+                resultDiv.innerHTML = `Xchange+ Value: <strong>RM ${allModels[model]}</strong>`;
             } else {
                 const similar = Object.keys(allModels).filter(m => 
                     m.toUpperCase().includes(model.toUpperCase()));
@@ -205,7 +205,7 @@
 
         function checkPassword() {
             const password = document.getElementById("password").value;
-            const correctPassword = "Xchange8410";  // Set the correct password here
+            const correctPassword = "Xchange+8410";  // Set the correct password here
             
             if (password === correctPassword) {
                 document.querySelector(".password-section").style.display = "none";
